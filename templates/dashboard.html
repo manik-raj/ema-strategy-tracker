@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — EMA Tracker{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Tracking Pairs</h2>
+    <a href="/add" class="btn btn-success">+ Add Pair</a>
+</div>
+
+{% if pairs %}
+<div class="table-responsive">
+    <table class="table table-hover align-middle">
+        <thead>
+            <tr>
+                <th>Symbol</th>
+                <th>Timeframe</th>
+                <th>Trend</th>
+                <th>EMA (21)</th>
+                <th>Last Close</th>
+                <th>Status</th>
+                <th>Trend Changed</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for p in pairs %}
+            <tr>
+                <td><strong>{{ p.symbol }}</strong></td>
+                <td>{{ p.timeframe }}</td>
+                <td>
+                    {% if p.current_trend == "UPTREND" %}
+                    <span class="badge bg-success">UPTREND</span>
+                    {% elif p.current_trend == "DOWNTREND" %}
+                    <span class="badge bg-danger">DOWNTREND</span>
+                    {% else %}
+                    <span class="badge bg-secondary">Pending</span>
+                    {% endif %}
+                </td>
+                <td>{{ "%.4f"|format(p.ema_value) if p.ema_value else "—" }}</td>
+                <td>{{ "%.4f"|format(p.last_close) if p.last_close else "—" }}</td>
+                <td>
+                    {% if p.is_active %}
+                    <span class="badge bg-primary">Active</span>
+                    {% else %}
+                    <span class="badge bg-warning text-dark">Paused</span>
+                    {% endif %}
+                </td>
+                <td>{{ p.trend_changed_at[:19] if p.trend_changed_at else "—" }}</td>
+                <td>
+                    <form method="post" action="/toggle/{{ p.id }}" class="d-inline">
+                        <button type="submit" class="btn btn-sm {{ 'btn-outline-warning' if p.is_active else 'btn-outline-success' }}">
+                            {{ "Pause" if p.is_active else "Resume" }}
+                        </button>
+                    </form>
+                    <form method="post" action="/delete/{{ p.id }}" class="d-inline" onsubmit="return confirm('Delete {{ p.symbol }} ({{ p.timeframe }})?')">
+                        <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="text-center text-muted py-5">
+    <h4>No tracking pairs configured</h4>
+    <p>Click "Add Pair" to start tracking a trading pair.</p>
+</div>
+{% endif %}
+
+{% if alerts %}
+<hr>
+<h4>Recent Alerts</h4>
+<div class="table-responsive">
+    <table class="table table-sm">
+        <thead>
+            <tr>
+                <th>Time</th>
+                <th>Pair</th>
+                <th>Type</th>
+                <th>Message</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for a in alerts %}
+            <tr>
+                <td class="text-nowrap">{{ a.created_at[:19] }}</td>
+                <td>{{ a.symbol }} ({{ a.timeframe }})</td>
+                <td>
+                    {% if a.alert_type == "TREND_CHANGE" %}
+                    <span class="badge bg-info">Trend Change</span>
+                    {% else %}
+                    <span class="badge bg-warning text-dark">Retest</span>
+                    {% endif %}
+                </td>
+                <td class="small">{{ a.message | striptags | truncate(80) }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+{% endblock %}

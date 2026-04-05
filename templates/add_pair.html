@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}Add Tracking Pair — EMA Tracker{% endblock %}
+
+{% block content %}
+<h2 class="mb-4">Add Tracking Pair</h2>
+
+<form method="post" action="/add" id="addForm">
+    <div class="row g-3">
+        <div class="col-md-6">
+            <label for="symbol" class="form-label">Trading Pair</label>
+            <input type="text" class="form-control" id="symbolSearch" placeholder="Search pairs (e.g. BTC)..." autocomplete="off">
+            <select class="form-select mt-2" name="symbol" id="symbol" size="8" required>
+                <option value="" disabled selected>Loading pairs...</option>
+            </select>
+        </div>
+        <div class="col-md-4">
+            <label for="timeframe" class="form-label">Timeframe</label>
+            <select class="form-select" name="timeframe" id="timeframe" required>
+                {% for value, label in timeframes %}
+                <option value="{{ value }}" {{ 'selected' if value == '1h' else '' }}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+    <div class="mt-4">
+        <button type="submit" class="btn btn-success">Add Tracking Pair</button>
+        <a href="/" class="btn btn-outline-secondary ms-2">Cancel</a>
+    </div>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let allPairs = [];
+
+    async function loadPairs() {
+        const select = document.getElementById('symbol');
+        try {
+            const resp = await fetch('/api/pairs');
+            allPairs = await resp.json();
+            renderPairs(allPairs);
+        } catch (e) {
+            select.innerHTML = '<option value="" disabled>Failed to load pairs</option>';
+        }
+    }
+
+    function renderPairs(pairs) {
+        const select = document.getElementById('symbol');
+        select.innerHTML = '';
+        pairs.forEach(p => {
+            const opt = document.createElement('option');
+            opt.value = p;
+            opt.textContent = p;
+            select.appendChild(opt);
+        });
+        if (pairs.length === 0) {
+            select.innerHTML = '<option value="" disabled>No pairs found</option>';
+        }
+    }
+
+    document.getElementById('symbolSearch').addEventListener('input', function() {
+        const q = this.value.toUpperCase();
+        const filtered = allPairs.filter(p => p.includes(q));
+        renderPairs(filtered);
+    });
+
+    loadPairs();
+</script>
+{% endblock %}

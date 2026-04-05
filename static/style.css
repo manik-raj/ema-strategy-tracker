@@ -1,0 +1,15 @@
+body {
+    min-height: 100vh;
+}
+
+.table th {
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    opacity: 0.8;
+}
+
+#symbol {
+    max-height: 250px;
+    overflow-y: auto;
+}

@@ -1,0 +1,9 @@
+fastapi
+uvicorn[standard]
+jinja2
+python-multipart
+python-dotenv
+python-binance
+python-telegram-bot>=21.0
+apscheduler>=3.10,<4
+aiosqlite
