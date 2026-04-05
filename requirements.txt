@@ -3,6 +3,8 @@ uvicorn[standard]
 jinja2
 python-multipart
 python-dotenv
+itsdangerous
+bcrypt
 python-binance
 python-telegram-bot>=21.0
 apscheduler>=3.10,<4
