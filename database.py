@@ -12,6 +12,7 @@ async def init_db():
                 current_trend TEXT,
                 trend_changed_at TEXT,
                 retest_alert_sent INTEGER NOT NULL DEFAULT 0,
+                retest_precision REAL NOT NULL DEFAULT 0.4,
                 ema_value REAL,
                 last_close REAL,
                 created_at TEXT NOT NULL DEFAULT (datetime('now')),
@@ -53,12 +54,12 @@ async def get_active_tracking_pairs():
         return [dict(row) for row in rows]
 
 
-async def add_tracking_pair(symbol: str, timeframe: str):
+async def add_tracking_pair(symbol: str, timeframe: str, retest_precision: float = 0.4):
     async with aiosqlite.connect(DB_PATH) as db:
         try:
             await db.execute(
-                "INSERT INTO tracking_pairs (symbol, timeframe) VALUES (?, ?)",
-                (symbol.upper(), timeframe),
+                "INSERT INTO tracking_pairs (symbol, timeframe, retest_precision) VALUES (?, ?, ?)",
+                (symbol.upper(), timeframe, retest_precision),
             )
             await db.commit()
             return True

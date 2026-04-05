@@ -75,8 +75,8 @@ async def check_tracking_pair(tp: dict):
 
     else:
         # Same trend — check for EMA retest
-        # Alert 2: EMA Retest (price within 0.4% of EMA, after a trend change, only once)
-        if not tp["retest_alert_sent"] and ema_distance_pct <= 0.4:
+        retest_precision = tp.get("retest_precision", 0.4)
+        if not tp["retest_alert_sent"] and ema_distance_pct <= retest_precision:
             msg = (
                 f"📍 <b>{symbol} ({timeframe})</b>: Price retesting 21 EMA\n"
                 f"Trend: <b>{old_trend}</b>\n"

@@ -17,6 +17,7 @@
                 <th>Trend</th>
                 <th>EMA (21)</th>
                 <th>Last Close</th>
+                <th>Retest %</th>
                 <th>Status</th>
                 <th>Trend Changed</th>
                 <th>Actions</th>
@@ -38,6 +39,7 @@
                 </td>
                 <td>{{ "%.4f"|format(p.ema_value) if p.ema_value else "—" }}</td>
                 <td>{{ "%.4f"|format(p.last_close) if p.last_close else "—" }}</td>
+                <td>{{ p.retest_precision }}%</td>
                 <td>
                     {% if p.is_active %}
                     <span class="badge bg-primary">Active</span>

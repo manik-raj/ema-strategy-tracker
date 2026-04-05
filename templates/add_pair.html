@@ -13,13 +13,19 @@
                 <option value="" disabled selected>Loading pairs...</option>
             </select>
         </div>
-        <div class="col-md-4">
+        <div class="col-md-3">
             <label for="timeframe" class="form-label">Timeframe</label>
             <select class="form-select" name="timeframe" id="timeframe" required>
                 {% for value, label in timeframes %}
                 <option value="{{ value }}" {{ 'selected' if value == '1h' else '' }}>{{ label }}</option>
                 {% endfor %}
             </select>
+        </div>
+        <div class="col-md-3">
+            <label for="retest_precision" class="form-label">Retest Precision %</label>
+            <input type="number" class="form-control" name="retest_precision" id="retest_precision"
+                   value="0.4" min="0.01" max="10" step="0.01" required>
+            <div class="form-text">How close to 21 EMA to trigger retest alert.</div>
         </div>
     </div>
     <div class="mt-4">
