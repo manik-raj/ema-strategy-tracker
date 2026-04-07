@@ -3,6 +3,7 @@ from config import DB_PATH
 
 async def init_db():
     async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute("PRAGMA journal_mode=WAL")
         await db.execute("""
             CREATE TABLE IF NOT EXISTS tracking_pairs (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -15,6 +16,7 @@ async def init_db():
                 retest_precision REAL NOT NULL DEFAULT 0.4,
                 ema_value REAL,
                 last_close REAL,
+                last_candle_time INTEGER NOT NULL DEFAULT 0,
                 created_at TEXT NOT NULL DEFAULT (datetime('now')),
                 UNIQUE(symbol, timeframe)
             )

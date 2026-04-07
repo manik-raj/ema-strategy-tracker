@@ -6,11 +6,15 @@ import database as db
 
 logger = logging.getLogger(__name__)
 
+# retest_alert_sent states:
+#   0 = awaiting separation (trend just changed, price needs to move away from EMA first)
+#   1 = eligible for retest (price has moved away, now watching for it to come back)
+#   2 = retest alert already sent for this trend
+
 
 def calculate_ema(closes: list[float], period: int = 21) -> float:
     """Calculate EMA for the given closing prices."""
     if len(closes) < period:
-        # Not enough data — use simple average
         return sum(closes) / len(closes) if closes else 0.0
 
     k = 2.0 / (period + 1)
@@ -28,13 +32,17 @@ async def check_tracking_pair(tp: dict):
     tp_id = tp["id"]
 
     try:
-        closes = get_klines(symbol, timeframe, limit=50)
+        closes, last_close_time = get_klines(symbol, timeframe, limit=50)
     except Exception as e:
         logger.error(f"Failed to fetch klines for {symbol} ({timeframe}): {e}")
         return
 
     if len(closes) < 21:
         logger.warning(f"Not enough data for {symbol} ({timeframe}): {len(closes)} candles")
+        return
+
+    # Skip if we already processed this candle
+    if last_close_time == tp.get("last_candle_time", 0):
         return
 
     ema = calculate_ema(closes, period=21)
@@ -46,9 +54,15 @@ async def check_tracking_pair(tp: dict):
 
     # Calculate distance from EMA
     ema_distance_pct = abs(last_close - ema) / ema * 100.0
+    retest_precision = tp.get("retest_precision", 0.4)
+    retest_state = tp["retest_alert_sent"]  # 0, 1, or 2
 
-    # Update EMA value and last close in DB
-    update_fields = {"ema_value": round(ema, 6), "last_close": round(last_close, 6)}
+    # Update EMA value, last close, and candle time in DB
+    update_fields = {
+        "ema_value": round(ema, 6),
+        "last_close": round(last_close, 6),
+        "last_candle_time": last_close_time,
+    }
 
     # Alert 1: Trend Change
     if old_trend is not None and new_trend != old_trend:
@@ -65,6 +79,7 @@ async def check_tracking_pair(tp: dict):
 
         update_fields["current_trend"] = new_trend
         update_fields["trend_changed_at"] = datetime.now(timezone.utc).isoformat()
+        # State 0: price must separate from EMA before retest is eligible
         update_fields["retest_alert_sent"] = 0
 
     elif old_trend is None:
@@ -74,19 +89,28 @@ async def check_tracking_pair(tp: dict):
         update_fields["retest_alert_sent"] = 0
 
     else:
-        # Same trend — check for EMA retest
-        retest_precision = tp.get("retest_precision", 0.4)
-        if not tp["retest_alert_sent"] and ema_distance_pct <= retest_precision:
-            msg = (
-                f"📍 <b>{symbol} ({timeframe})</b>: Price retesting 21 EMA\n"
-                f"Trend: <b>{old_trend}</b>\n"
-                f"Price: <code>{last_close:.4f}</code> | EMA: <code>{ema:.4f}</code> "
-                f"({ema_distance_pct:.2f}% away)"
-            )
-            await send_alert(msg)
-            await db.add_alert_log(tp_id, "EMA_RETEST", msg)
-            logger.info(f"EMA retest alert: {symbol} ({timeframe}) — {ema_distance_pct:.2f}% from EMA")
-            update_fields["retest_alert_sent"] = 1
+        # Same trend — handle retest state machine
+        if retest_state == 0:
+            # Waiting for price to move AWAY from EMA after trend change
+            if ema_distance_pct > retest_precision:
+                update_fields["retest_alert_sent"] = 1
+                logger.info(f"Retest eligible: {symbol} ({timeframe}) — price separated {ema_distance_pct:.2f}% from EMA")
+
+        elif retest_state == 1:
+            # Price has separated — now watching for it to come back near EMA
+            if ema_distance_pct <= retest_precision:
+                msg = (
+                    f"📍 <b>{symbol} ({timeframe})</b>: Price retesting 21 EMA\n"
+                    f"Trend: <b>{old_trend}</b>\n"
+                    f"Price: <code>{last_close:.4f}</code> | EMA: <code>{ema:.4f}</code> "
+                    f"({ema_distance_pct:.2f}% away)"
+                )
+                await send_alert(msg)
+                await db.add_alert_log(tp_id, "EMA_RETEST", msg)
+                logger.info(f"EMA retest alert: {symbol} ({timeframe}) — {ema_distance_pct:.2f}% from EMA")
+                update_fields["retest_alert_sent"] = 2
+
+        # State 2: retest already sent, do nothing
 
     await db.update_tracking_pair(tp_id, **update_fields)
 

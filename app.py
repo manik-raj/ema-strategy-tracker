@@ -161,6 +161,7 @@ async def add_pair_form(request: Request):
 
 @app.post("/add", dependencies=[Depends(require_login)])
 async def add_pair(symbol: str = Form(...), timeframe: str = Form(...), retest_precision: float = Form(0.4)):
+    retest_precision = max(0.01, min(10.0, retest_precision))
     success = await db.add_tracking_pair(symbol, timeframe, retest_precision)
     if success:
         flash(f"Added tracking pair: {symbol} ({timeframe})")

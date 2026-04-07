@@ -7,7 +7,8 @@ client = Client("", "")
 
 def get_klines(symbol: str, timeframe: str, limit: int = 50):
     """Fetch kline/candlestick data from Binance.
-    Returns list of closing prices (floats) for completed candles.
+    Returns (closes, last_close_time) where closes is a list of floats
+    and last_close_time is the close timestamp (ms) of the last completed candle.
     """
     interval = BINANCE_INTERVAL_MAP.get(timeframe, timeframe)
     # limit+1 because the last candle may be incomplete (still open)
@@ -18,7 +19,8 @@ def get_klines(symbol: str, timeframe: str, limit: int = 50):
     now_ms = int(time.time() * 1000)
     completed = [k for k in klines if k[6] <= now_ms]
     closes = [float(k[4]) for k in completed]
-    return closes
+    last_close_time = completed[-1][6] if completed else 0
+    return closes, last_close_time
 
 
 def get_current_price(symbol: str) -> float:

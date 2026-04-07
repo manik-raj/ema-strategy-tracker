@@ -127,3 +127,10 @@ async def stop_bot():
     global _bot_app
     if _bot_app:
         logger.info("Stopping Telegram bot...")
+        try:
+            await _bot_app.updater.stop()
+            await _bot_app.stop()
+            await _bot_app.shutdown()
+        except Exception as e:
+            logger.error(f"Error stopping Telegram bot: {e}")
+        _bot_app = None
